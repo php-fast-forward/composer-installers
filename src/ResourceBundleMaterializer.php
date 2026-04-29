@@ -2,6 +2,19 @@
 
 declare(strict_types=1);
 
+/**
+ * Composer installer plugin for Fast Forward resource bundles.
+ *
+ * This file is part of fast-forward/composer-installers project.
+ *
+ * @author   Felipe Sayao Lobato Abreu <github@mentordosnerds.com>
+ * @license  https://opensource.org/licenses/MIT MIT License
+ *
+ * @see      https://github.com/php-fast-forward/composer-installers
+ * @see      https://github.com/php-fast-forward/composer-installers/issues
+ * @see      https://datatracker.ietf.org/doc/html/rfc2119
+ */
+
 namespace FastForward\ComposerInstallers;
 
 use Composer\Composer;
@@ -9,24 +22,56 @@ use Composer\Config;
 use Composer\IO\IOInterface;
 use Composer\Package\PackageInterface;
 use Composer\Util\Filesystem;
+use JsonException;
 use RuntimeException;
 
+/**
+ * Copies resource bundle payloads into consumer-selected target directories.
+ *
+ * Materialized files are tracked in a manifest so package updates can refresh
+ * managed files and remove stale managed paths without deleting local consumer
+ * files.
+ */
 final class ResourceBundleMaterializer
 {
+    /**
+     * Resource package metadata key used to configure bundle behavior.
+     */
     private const string BUNDLE_EXTRA_KEY = 'fast-forward-bundle';
 
+    /**
+     * Root package metadata key used to map packages to target paths.
+     */
     private const string INSTALLER_PATHS_KEY = 'installer-paths';
 
+    /**
+     * Resource package metadata key containing the payload directory.
+     */
     private const string PAYLOAD_PATH_KEY = 'payload-path';
 
+    /**
+     * Filesystem helper shared with Composer internals.
+     */
     private readonly Filesystem $filesystem;
 
+    /**
+     * Absolute path to the root package vendor directory.
+     */
     private readonly string $vendorDir;
 
+    /**
+     * Absolute path where installer manifests are stored.
+     */
     private readonly string $manifestDir;
 
+    /**
+     * Absolute path to the root package directory.
+     */
     private readonly string $rootDir;
 
+    /**
+     * Creates a materializer bound to the active Composer root package.
+     */
     public function __construct(
         private readonly Composer $composer,
         private readonly IOInterface $io,
@@ -51,6 +96,14 @@ final class ResourceBundleMaterializer
         $this->manifestDir = $this->join($this->rootDir, 'vendor/fast-forward/.composer-installers');
     }
 
+    /**
+     * Copies the package payload into the configured consumer target path.
+     *
+     * @throws JsonException
+     * @throws RuntimeException When bundle metadata is invalid or files cannot be copied safely.
+     *
+     * @return void
+     */
     public function materialize(PackageInterface $package, string $installPath): void
     {
         $payloadPath = $this->payloadPath($package);
@@ -84,6 +137,13 @@ final class ResourceBundleMaterializer
         ), true, IOInterface::VERBOSE);
     }
 
+    /**
+     * Removes all paths tracked by the package manifest.
+     *
+     * @throws JsonException
+     *
+     * @return void
+     */
     public function remove(PackageInterface $package): void
     {
         $manifest = $this->readManifest($package);
@@ -104,6 +164,8 @@ final class ResourceBundleMaterializer
     }
 
     /**
+     * Scans payload files and directories into manifest entries.
+     *
      * @return array<string, array{type: string, hash?: string}>
      */
     private function scanPayload(string $source): array
@@ -138,8 +200,14 @@ final class ResourceBundleMaterializer
     }
 
     /**
+     * Copies all manifest entries from the source payload into the consumer target.
+     *
      * @param array<string, array{type: string, hash?: string}> $entries
      * @param array<string, array{type: string, hash?: string}> $previousEntries
+     *
+     * @throws RuntimeException When a consumer-owned path would be overwritten or a file copy fails.
+     *
+     * @return void
      */
     private function copyEntries(string $source, string $target, array $entries, array $previousEntries): void
     {
@@ -175,8 +243,12 @@ final class ResourceBundleMaterializer
     }
 
     /**
+     * Removes entries that existed in the previous manifest but not in the next payload.
+     *
      * @param array<string, array{type: string, hash?: string}> $previousEntries
      * @param array<string, array{type: string, hash?: string}> $nextEntries
+     *
+     * @return void
      */
     private function removeStaleEntries(array $previousEntries, array $nextEntries, string $target): void
     {
@@ -185,7 +257,11 @@ final class ResourceBundleMaterializer
     }
 
     /**
+     * Removes files and empty directories that belong to a manifest.
+     *
      * @param array<string, array{type: string, hash?: string}> $entries
+     *
+     * @return void
      */
     private function removeEntries(array $entries, string $target): void
     {
@@ -206,6 +282,11 @@ final class ResourceBundleMaterializer
         }
     }
 
+    /**
+     * Resolves the configured consumer target path for a resource bundle package.
+     *
+     * @throws RuntimeException When the root installer path metadata is invalid or missing.
+     */
     private function targetPath(PackageInterface $package): string
     {
         $rootExtra = $this->composer->getPackage()->getExtra();
@@ -233,6 +314,9 @@ final class ResourceBundleMaterializer
         ));
     }
 
+    /**
+     * Checks whether a root installer-paths match applies to a package.
+     */
     private function matchesPackage(string $match, PackageInterface $package): bool
     {
         return $match === $package->getName()
@@ -240,6 +324,11 @@ final class ResourceBundleMaterializer
             || $match === 'type:' . ResourceBundleInstaller::PACKAGE_TYPE;
     }
 
+    /**
+     * Resolves and validates the package payload directory metadata.
+     *
+     * @throws RuntimeException When the package does not declare a usable payload path.
+     */
     private function payloadPath(PackageInterface $package): string
     {
         $extra = $package->getExtra();
@@ -267,6 +356,10 @@ final class ResourceBundleMaterializer
     }
 
     /**
+     * Reads the package manifest if one was written by a previous install or update.
+     *
+     * @throws JsonException
+     *
      * @return array{entries?: array<string, array{type: string, hash?: string}>, target-path?: string}
      */
     private function readManifest(PackageInterface $package): array
@@ -287,7 +380,13 @@ final class ResourceBundleMaterializer
     }
 
     /**
+     * Writes the package manifest used by future updates and removals.
+     *
      * @param array<string, mixed> $manifest
+     *
+     * @throws JsonException
+     *
+     * @return void
      */
     private function writeManifest(PackageInterface $package, array $manifest): void
     {
@@ -304,6 +403,9 @@ final class ResourceBundleMaterializer
         );
     }
 
+    /**
+     * Resolves the manifest path for a package.
+     */
     private function manifestPath(PackageInterface $package): string
     {
         return $this->join(
@@ -312,6 +414,9 @@ final class ResourceBundleMaterializer
         );
     }
 
+    /**
+     * Replaces supported Composer installer path variables for a package.
+     */
     private function replaceVariables(string $path, PackageInterface $package): string
     {
         [$vendor, $name] = explode('/', $package->getPrettyName(), 2) + ['', $package->getPrettyName()];
@@ -323,6 +428,9 @@ final class ResourceBundleMaterializer
         ]);
     }
 
+    /**
+     * Resolves a path relative to the root package directory.
+     */
     private function absolutePath(string $path): string
     {
         if (str_starts_with($path, '/')) {
@@ -332,6 +440,9 @@ final class ResourceBundleMaterializer
         return rtrim($this->rootDir . '/' . $path, '/');
     }
 
+    /**
+     * Converts an absolute path into a root-package-relative path when possible.
+     */
     private function relativePath(string $path): string
     {
         $path = $this->normalizePath($path);
@@ -344,16 +455,25 @@ final class ResourceBundleMaterializer
         return $path;
     }
 
+    /**
+     * Joins two normalized path segments.
+     */
     private function join(string $left, string $right): string
     {
         return rtrim($left, '/') . '/' . ltrim($right, '/');
     }
 
+    /**
+     * Normalizes directory separators and outer slashes for manifest paths.
+     */
     private function normalizePath(string $path): string
     {
         return str_replace('\\', '/', trim($path, '/'));
     }
 
+    /**
+     * Creates the conflict exception used when a consumer-owned path would be overwritten.
+     */
     private function conflict(string $path): RuntimeException
     {
         return new RuntimeException(\sprintf(

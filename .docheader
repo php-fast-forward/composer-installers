@@ -1,0 +1,12 @@
+/**
+ * Composer installer plugin for Fast Forward resource bundles.
+ *
+ * This file is part of fast-forward/composer-installers project.
+ *
+ * @author   Felipe Sayao Lobato Abreu <github@mentordosnerds.com>
+ * @license  https://opensource.org/licenses/MIT MIT License
+ *
+ * @see      https://github.com/php-fast-forward/composer-installers
+ * @see      https://github.com/php-fast-forward/composer-installers/issues
+ * @see      https://datatracker.ietf.org/doc/html/rfc2119
+ */
