@@ -128,13 +128,19 @@ final class ResourceBundleMaterializer
         $nextEntries = $this->scanPayload($source);
 
         $this->removeStaleEntries($previousManifest['entries'] ?? [], $nextEntries, $target);
-        $this->copyEntries($source, $target, $nextEntries, $previousManifest['entries'] ?? [], $installPolicy);
+        $managedEntries = $this->copyEntries(
+            $source,
+            $target,
+            $nextEntries,
+            $previousManifest['entries'] ?? [],
+            $installPolicy,
+        );
         $this->writeManifest($package, [
             'package' => $package->getPrettyName(),
             'payload-path' => $payloadPath,
             'install-policy' => $installPolicy->value,
             'target-path' => $this->relativePath($target),
-            'entries' => $nextEntries,
+            'entries' => $managedEntries,
         ]);
 
         $this->io->writeError(\sprintf(
@@ -207,14 +213,14 @@ final class ResourceBundleMaterializer
     }
 
     /**
-     * Copies all manifest entries from the source payload into the consumer target.
+     * Copies all non-conflicting manifest entries from the source payload into the consumer target.
      *
      * @param array<string, array{type: string, hash?: string}> $entries
      * @param array<string, array{type: string, hash?: string}> $previousEntries
      *
-     * @throws RuntimeException When a consumer-owned path would be overwritten or a file copy fails.
+     * @throws RuntimeException When a file copy fails.
      *
-     * @return void
+     * @return array<string, array{type: string, hash?: string}>
      */
     private function copyEntries(
         string $source,
@@ -222,15 +228,25 @@ final class ResourceBundleMaterializer
         array $entries,
         array $previousEntries,
         InstallPolicy $installPolicy,
-    ): void {
+    ): array {
+        $managedEntries = [];
+        $skippedDirectories = [];
+
         foreach ($entries as $relativePath => $entry) {
+            if ($this->isInsideSkippedDirectory($relativePath, $skippedDirectories)) {
+                continue;
+            }
+
             $sourcePath = $this->join($source, $relativePath);
             $targetPath = $this->join($target, $relativePath);
 
             if ('dir' === $entry['type']) {
                 if (is_file($targetPath) || is_link($targetPath)) {
                     if (! $installPolicy->overwritesExistingFiles()) {
-                        throw $this->conflict($targetPath, $installPolicy);
+                        $this->skipConflict($targetPath, $installPolicy, 'target path is not a directory');
+                        $skippedDirectories[] = $relativePath;
+
+                        continue;
                     }
 
                     unlink($targetPath);
@@ -240,30 +256,48 @@ final class ResourceBundleMaterializer
                     mkdir($targetPath, 0777, true);
                 }
 
+                $managedEntries[$relativePath] = $entry;
+
                 continue;
             }
 
             if ((file_exists($targetPath) || is_link($targetPath)) && ! isset($previousEntries[$relativePath])) {
                 if ($this->targetFileMatchesEntry($targetPath, $entry)) {
+                    $managedEntries[$relativePath] = $entry;
+
                     continue;
                 }
 
                 if (! $installPolicy->overwritesExistingFiles()) {
-                    throw $this->conflict($targetPath, $installPolicy);
+                    $this->skipConflict($targetPath, $installPolicy, 'target file differs from the payload');
+
+                    continue;
                 }
             }
 
             $parent = \dirname($targetPath);
             if (! is_dir($parent)) {
+                if (file_exists($parent) || is_link($parent)) {
+                    $this->skipConflict($parent, $installPolicy, 'parent path is not a directory');
+
+                    continue;
+                }
+
                 mkdir($parent, 0777, true);
             }
 
-            $this->prepareFileTarget($targetPath, $installPolicy);
+            if (! $this->prepareFileTarget($targetPath, $installPolicy)) {
+                continue;
+            }
 
             if (! copy($sourcePath, $targetPath)) {
                 throw new RuntimeException(\sprintf('Failed to copy "%s" to "%s".', $sourcePath, $targetPath));
             }
+
+            $managedEntries[$relativePath] = $entry;
         }
+
+        return $managedEntries;
     }
 
     /**
@@ -555,37 +589,55 @@ final class ResourceBundleMaterializer
     /**
      * Prepares a target path so a payload file can be copied into place.
      */
-    private function prepareFileTarget(string $targetPath, InstallPolicy $installPolicy): void
+    private function prepareFileTarget(string $targetPath, InstallPolicy $installPolicy): bool
     {
         if (is_link($targetPath)) {
             unlink($targetPath);
 
-            return;
+            return true;
         }
 
         if (! is_dir($targetPath)) {
-            return;
+            return true;
         }
 
         if ($installPolicy->overwritesExistingFiles() && $this->filesystem->isDirEmpty($targetPath)) {
             rmdir($targetPath);
 
-            return;
+            return true;
         }
 
-        throw $this->conflict($targetPath, $installPolicy);
+        $this->skipConflict($targetPath, $installPolicy, 'target path is a directory');
+
+        return false;
     }
 
     /**
-     * Creates the conflict exception used when a consumer-owned path would be overwritten.
+     * Checks whether an entry is under a directory skipped earlier in the copy pass.
+     *
+     * @param list<string> $skippedDirectories
      */
-    private function conflict(string $path, InstallPolicy $installPolicy): RuntimeException
+    private function isInsideSkippedDirectory(string $relativePath, array $skippedDirectories): bool
     {
-        return new RuntimeException(\sprintf(
-            'Refusing to overwrite consumer-owned path "%s" while using "%s" install policy. '
-            . 'Remove it, restore the manifest, or use the "authoritative" policy for this bundle.',
+        foreach ($skippedDirectories as $skippedDirectory) {
+            if ($relativePath === $skippedDirectory || str_starts_with($relativePath, $skippedDirectory . '/')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Writes the warning used when a consumer-owned path is skipped.
+     */
+    private function skipConflict(string $path, InstallPolicy $installPolicy, string $reason): void
+    {
+        $this->io->writeError(\sprintf(
+            '<warning>Skipped consumer-owned path "%s" while using "%s" install policy: %s.</warning>',
             $this->relativePath($path),
             $installPolicy->value,
+            $reason,
         ));
     }
 }
