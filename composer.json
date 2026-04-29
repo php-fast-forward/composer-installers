@@ -1,0 +1,55 @@
+{
+    "name": "fast-forward/composer-installers",
+    "description": "Composer installer plugin for Fast Forward resource bundles.",
+    "license": "MIT",
+    "type": "composer-plugin",
+    "keywords": [
+        "composer",
+        "fast-forward",
+        "installer",
+        "plugin",
+        "resources"
+    ],
+    "readme": "README.md",
+    "authors": [
+        {
+            "name": "Felipe Sayao Lobato Abreu",
+            "email": "github@mentordosnerds.com",
+            "homepage": "https://github.com/coisa",
+            "role": "Maintainer"
+        }
+    ],
+    "homepage": "https://github.com/php-fast-forward/composer-installers",
+    "support": {
+        "issues": "https://github.com/php-fast-forward/composer-installers/issues",
+        "source": "https://github.com/php-fast-forward/composer-installers"
+    },
+    "require": {
+        "php": "^8.3",
+        "composer-plugin-api": "^2.6"
+    },
+    "require-dev": {
+        "composer/composer": "^2.8"
+    },
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {
+            "FastForward\\ComposerInstallers\\": "src/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "fast-forward/composer-installers": true
+        },
+        "platform": {
+            "php": "8.3.0"
+        },
+        "sort-packages": true
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "1.x-dev"
+        },
+        "class": "FastForward\\ComposerInstallers\\Plugin"
+    }
+}
