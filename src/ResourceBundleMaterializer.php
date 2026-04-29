@@ -50,6 +50,26 @@ final class ResourceBundleMaterializer
     private const string PAYLOAD_PATH_KEY = 'payload-path';
 
     /**
+     * Resource package metadata key containing the existing-file policy.
+     */
+    private const string INSTALL_POLICY_KEY = 'install-policy';
+
+    /**
+     * Existing target files are adopted only when they match the payload.
+     */
+    private const string INSTALL_POLICY_MUTABLE = 'mutable';
+
+    /**
+     * Existing target files are overwritten by the payload.
+     */
+    private const string INSTALL_POLICY_AUTHORITATIVE = 'authoritative';
+
+    /**
+     * Default existing-file policy for resource bundles.
+     */
+    private const string DEFAULT_INSTALL_POLICY = self::INSTALL_POLICY_MUTABLE;
+
+    /**
      * Filesystem helper shared with Composer internals.
      */
     private readonly Filesystem $filesystem;
@@ -107,6 +127,7 @@ final class ResourceBundleMaterializer
     public function materialize(PackageInterface $package, string $installPath): void
     {
         $payloadPath = $this->payloadPath($package);
+        $installPolicy = $this->installPolicy($package);
         $source = $this->join($installPath, $payloadPath);
         $target = $this->targetPath($package);
 
@@ -122,10 +143,11 @@ final class ResourceBundleMaterializer
         $nextEntries = $this->scanPayload($source);
 
         $this->removeStaleEntries($previousManifest['entries'] ?? [], $nextEntries, $target);
-        $this->copyEntries($source, $target, $nextEntries, $previousManifest['entries'] ?? []);
+        $this->copyEntries($source, $target, $nextEntries, $previousManifest['entries'] ?? [], $installPolicy);
         $this->writeManifest($package, [
             'package' => $package->getPrettyName(),
             'payload-path' => $payloadPath,
+            'install-policy' => $installPolicy,
             'target-path' => $this->relativePath($target),
             'entries' => $nextEntries,
         ]);
@@ -209,15 +231,24 @@ final class ResourceBundleMaterializer
      *
      * @return void
      */
-    private function copyEntries(string $source, string $target, array $entries, array $previousEntries): void
-    {
+    private function copyEntries(
+        string $source,
+        string $target,
+        array $entries,
+        array $previousEntries,
+        string $installPolicy,
+    ): void {
         foreach ($entries as $relativePath => $entry) {
             $sourcePath = $this->join($source, $relativePath);
             $targetPath = $this->join($target, $relativePath);
 
             if ('dir' === $entry['type']) {
                 if (is_file($targetPath) || is_link($targetPath)) {
-                    throw $this->conflict($targetPath);
+                    if (self::INSTALL_POLICY_AUTHORITATIVE !== $installPolicy) {
+                        throw $this->conflict($targetPath, $installPolicy);
+                    }
+
+                    unlink($targetPath);
                 }
 
                 if (! is_dir($targetPath)) {
@@ -227,14 +258,22 @@ final class ResourceBundleMaterializer
                 continue;
             }
 
-            if (file_exists($targetPath) && ! isset($previousEntries[$relativePath])) {
-                throw $this->conflict($targetPath);
+            if ((file_exists($targetPath) || is_link($targetPath)) && ! isset($previousEntries[$relativePath])) {
+                if ($this->targetFileMatchesEntry($targetPath, $entry)) {
+                    continue;
+                }
+
+                if (self::INSTALL_POLICY_AUTHORITATIVE !== $installPolicy) {
+                    throw $this->conflict($targetPath, $installPolicy);
+                }
             }
 
             $parent = \dirname($targetPath);
             if (! is_dir($parent)) {
                 mkdir($parent, 0777, true);
             }
+
+            $this->prepareFileTarget($targetPath, $installPolicy);
 
             if (! copy($sourcePath, $targetPath)) {
                 throw new RuntimeException(\sprintf('Failed to copy "%s" to "%s".', $sourcePath, $targetPath));
@@ -331,10 +370,8 @@ final class ResourceBundleMaterializer
      */
     private function payloadPath(PackageInterface $package): string
     {
-        $extra = $package->getExtra();
-        $metadata = $extra[self::BUNDLE_EXTRA_KEY] ?? [];
-
-        if (! \is_array($metadata) || ! isset($metadata[self::PAYLOAD_PATH_KEY])) {
+        $metadata = $this->bundleMetadata($package);
+        if (! isset($metadata[self::PAYLOAD_PATH_KEY])) {
             throw new RuntimeException(\sprintf(
                 'Fast Forward resource bundle "%s" must declare extra.%s.%s.',
                 $package->getPrettyName(),
@@ -353,6 +390,51 @@ final class ResourceBundleMaterializer
         }
 
         return $payloadPath;
+    }
+
+    /**
+     * Resolves and validates the package install policy metadata.
+     *
+     * @throws RuntimeException When the package declares an unsupported install policy.
+     */
+    private function installPolicy(PackageInterface $package): string
+    {
+        $metadata = $this->bundleMetadata($package);
+        $installPolicy = (string) ($metadata[self::INSTALL_POLICY_KEY] ?? self::DEFAULT_INSTALL_POLICY);
+
+        if (! \in_array($installPolicy, [self::INSTALL_POLICY_MUTABLE, self::INSTALL_POLICY_AUTHORITATIVE], true)) {
+            throw new RuntimeException(\sprintf(
+                'Fast Forward resource bundle "%s" declares unsupported install policy "%s". '
+                . 'Supported policies: "%s", "%s".',
+                $package->getPrettyName(),
+                $installPolicy,
+                self::INSTALL_POLICY_MUTABLE,
+                self::INSTALL_POLICY_AUTHORITATIVE,
+            ));
+        }
+
+        return $installPolicy;
+    }
+
+    /**
+     * Resolves the package Fast Forward resource bundle metadata.
+     *
+     * @return array<string, mixed>
+     */
+    private function bundleMetadata(PackageInterface $package): array
+    {
+        $extra = $package->getExtra();
+        $metadata = $extra[self::BUNDLE_EXTRA_KEY] ?? [];
+
+        if (! \is_array($metadata)) {
+            throw new RuntimeException(\sprintf(
+                'Fast Forward resource bundle "%s" must declare extra.%s as an object.',
+                $package->getPrettyName(),
+                self::BUNDLE_EXTRA_KEY,
+            ));
+        }
+
+        return $metadata;
     }
 
     /**
@@ -472,13 +554,52 @@ final class ResourceBundleMaterializer
     }
 
     /**
+     * Checks whether a target file already matches a payload manifest entry.
+     *
+     * @param array{type: string, hash?: string} $entry
+     */
+    private function targetFileMatchesEntry(string $targetPath, array $entry): bool
+    {
+        return ! is_link($targetPath)
+            && is_file($targetPath)
+            && isset($entry['hash'])
+            && hash_file('sha256', $targetPath) === $entry['hash'];
+    }
+
+    /**
+     * Prepares a target path so a payload file can be copied into place.
+     */
+    private function prepareFileTarget(string $targetPath, string $installPolicy): void
+    {
+        if (is_link($targetPath)) {
+            unlink($targetPath);
+
+            return;
+        }
+
+        if (! is_dir($targetPath)) {
+            return;
+        }
+
+        if (self::INSTALL_POLICY_AUTHORITATIVE === $installPolicy && $this->filesystem->isDirEmpty($targetPath)) {
+            rmdir($targetPath);
+
+            return;
+        }
+
+        throw $this->conflict($targetPath, $installPolicy);
+    }
+
+    /**
      * Creates the conflict exception used when a consumer-owned path would be overwritten.
      */
-    private function conflict(string $path): RuntimeException
+    private function conflict(string $path, string $installPolicy): RuntimeException
     {
         return new RuntimeException(\sprintf(
-            'Refusing to overwrite consumer-owned path "%s". Remove it or let the installer manage it first.',
+            'Refusing to overwrite consumer-owned path "%s" while using "%s" install policy. '
+            . 'Remove it, restore the manifest, or use the "authoritative" policy for this bundle.',
             $this->relativePath($path),
+            $installPolicy,
         ));
     }
 }
