@@ -10,18 +10,22 @@ are materialized into consumer-owned paths.
 ## Resource Package Metadata
 
 Resource packages use the `fast-forward-resource-bundle` type and declare the
-payload directory to copy:
+payload directory to copy. They may also declare how existing target files are
+handled when the manifest is missing:
 
 ```json
 {
   "type": "fast-forward-resource-bundle",
   "extra": {
     "fast-forward-bundle": {
-      "payload-path": ".agents"
+      "payload-path": ".agents",
+      "install-policy": "mutable"
     }
   }
 }
 ```
+
+`install-policy` is optional and defaults to `mutable`.
 
 ## Consumer Configuration
 
@@ -53,8 +57,22 @@ without creating `.agents/agents/.agents`.
 The installer writes a manifest under `vendor/fast-forward/.composer-installers`
 for each materialized package. On package update, files listed in the manifest
 are refreshed from the new payload and stale managed files are removed. Files
-that already exist in the target but are not tracked by the manifest are treated
-as consumer-owned and are not silently overwritten.
+that already exist in the target but are not tracked by the manifest are handled
+according to the bundle install policy.
+
+The `mutable` policy is the default. It adopts existing files when their content
+already matches the payload and recreates the manifest, which makes `composer
+install` safe after deleting `vendor/`. If an existing file differs from the
+payload and no manifest marks it as managed, installation fails instead of
+overwriting a consumer customization.
+
+The `authoritative` policy is intended for generated or shared automation such
+as GitHub workflow bundles. It overwrites existing divergent target files and
+then writes a fresh manifest, allowing committed workflow files to be refreshed
+after a clean clone where `vendor/` has not been installed yet. Authoritative
+bundles should use package-specific target directories or clearly owned file
+names, such as a `fast-forward-` prefix, so the installer only overwrites paths
+that are intentionally controlled by the bundle.
 
 The materialized payload is copied as literal files and directories. Composer
 `path` repositories may still symlink the package root in `vendor/`, but the
