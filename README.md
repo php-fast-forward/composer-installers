@@ -63,8 +63,10 @@ according to the bundle install policy.
 The `mutable` policy is the default. It adopts existing files when their content
 already matches the payload and recreates the manifest, which makes `composer
 install` safe after deleting `vendor/`. If an existing file differs from the
-payload and no manifest marks it as managed, installation fails instead of
-overwriting a consumer customization.
+payload and no manifest marks it as managed, that path is skipped with a warning
+instead of overwriting a consumer customization. The installer still materializes
+the remaining payload entries and records only copied or adopted entries in the
+manifest.
 
 The `authoritative` policy is intended for generated or shared automation such
 as GitHub workflow bundles. It overwrites existing divergent target files and
@@ -72,7 +74,8 @@ then writes a fresh manifest, allowing committed workflow files to be refreshed
 after a clean clone where `vendor/` has not been installed yet. Authoritative
 bundles should use package-specific target directories or clearly owned file
 names, such as a `fast-forward-` prefix, so the installer only overwrites paths
-that are intentionally controlled by the bundle.
+that are intentionally controlled by the bundle. Non-empty consumer directories
+are not removed automatically; they are skipped with a warning.
 
 The materialized payload is copied as literal files and directories. Composer
 `path` repositories may still symlink the package root in `vendor/`, but the
