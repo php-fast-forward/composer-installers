@@ -55,21 +55,6 @@ final class ResourceBundleMaterializer
     private const string INSTALL_POLICY_KEY = 'install-policy';
 
     /**
-     * Existing target files are adopted only when they match the payload.
-     */
-    private const string INSTALL_POLICY_MUTABLE = 'mutable';
-
-    /**
-     * Existing target files are overwritten by the payload.
-     */
-    private const string INSTALL_POLICY_AUTHORITATIVE = 'authoritative';
-
-    /**
-     * Default existing-file policy for resource bundles.
-     */
-    private const string DEFAULT_INSTALL_POLICY = self::INSTALL_POLICY_MUTABLE;
-
-    /**
      * Filesystem helper shared with Composer internals.
      */
     private readonly Filesystem $filesystem;
@@ -147,7 +132,7 @@ final class ResourceBundleMaterializer
         $this->writeManifest($package, [
             'package' => $package->getPrettyName(),
             'payload-path' => $payloadPath,
-            'install-policy' => $installPolicy,
+            'install-policy' => $installPolicy->value,
             'target-path' => $this->relativePath($target),
             'entries' => $nextEntries,
         ]);
@@ -236,7 +221,7 @@ final class ResourceBundleMaterializer
         string $target,
         array $entries,
         array $previousEntries,
-        string $installPolicy,
+        InstallPolicy $installPolicy,
     ): void {
         foreach ($entries as $relativePath => $entry) {
             $sourcePath = $this->join($source, $relativePath);
@@ -244,7 +229,7 @@ final class ResourceBundleMaterializer
 
             if ('dir' === $entry['type']) {
                 if (is_file($targetPath) || is_link($targetPath)) {
-                    if (self::INSTALL_POLICY_AUTHORITATIVE !== $installPolicy) {
+                    if (! $installPolicy->overwritesExistingFiles()) {
                         throw $this->conflict($targetPath, $installPolicy);
                     }
 
@@ -263,7 +248,7 @@ final class ResourceBundleMaterializer
                     continue;
                 }
 
-                if (self::INSTALL_POLICY_AUTHORITATIVE !== $installPolicy) {
+                if (! $installPolicy->overwritesExistingFiles()) {
                     throw $this->conflict($targetPath, $installPolicy);
                 }
             }
@@ -397,23 +382,24 @@ final class ResourceBundleMaterializer
      *
      * @throws RuntimeException When the package declares an unsupported install policy.
      */
-    private function installPolicy(PackageInterface $package): string
+    private function installPolicy(PackageInterface $package): InstallPolicy
     {
         $metadata = $this->bundleMetadata($package);
-        $installPolicy = (string) ($metadata[self::INSTALL_POLICY_KEY] ?? self::DEFAULT_INSTALL_POLICY);
+        $installPolicy = (string) ($metadata[self::INSTALL_POLICY_KEY] ?? InstallPolicy::default()->value);
+        $policy = InstallPolicy::tryFrom($installPolicy);
 
-        if (! \in_array($installPolicy, [self::INSTALL_POLICY_MUTABLE, self::INSTALL_POLICY_AUTHORITATIVE], true)) {
+        if (! $policy instanceof InstallPolicy) {
             throw new RuntimeException(\sprintf(
                 'Fast Forward resource bundle "%s" declares unsupported install policy "%s". '
                 . 'Supported policies: "%s", "%s".',
                 $package->getPrettyName(),
                 $installPolicy,
-                self::INSTALL_POLICY_MUTABLE,
-                self::INSTALL_POLICY_AUTHORITATIVE,
+                InstallPolicy::Mutable->value,
+                InstallPolicy::Authoritative->value,
             ));
         }
 
-        return $installPolicy;
+        return $policy;
     }
 
     /**
@@ -569,7 +555,7 @@ final class ResourceBundleMaterializer
     /**
      * Prepares a target path so a payload file can be copied into place.
      */
-    private function prepareFileTarget(string $targetPath, string $installPolicy): void
+    private function prepareFileTarget(string $targetPath, InstallPolicy $installPolicy): void
     {
         if (is_link($targetPath)) {
             unlink($targetPath);
@@ -581,7 +567,7 @@ final class ResourceBundleMaterializer
             return;
         }
 
-        if (self::INSTALL_POLICY_AUTHORITATIVE === $installPolicy && $this->filesystem->isDirEmpty($targetPath)) {
+        if ($installPolicy->overwritesExistingFiles() && $this->filesystem->isDirEmpty($targetPath)) {
             rmdir($targetPath);
 
             return;
@@ -593,13 +579,13 @@ final class ResourceBundleMaterializer
     /**
      * Creates the conflict exception used when a consumer-owned path would be overwritten.
      */
-    private function conflict(string $path, string $installPolicy): RuntimeException
+    private function conflict(string $path, InstallPolicy $installPolicy): RuntimeException
     {
         return new RuntimeException(\sprintf(
             'Refusing to overwrite consumer-owned path "%s" while using "%s" install policy. '
             . 'Remove it, restore the manifest, or use the "authoritative" policy for this bundle.',
             $this->relativePath($path),
-            $installPolicy,
+            $installPolicy->value,
         ));
     }
 }
