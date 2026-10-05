@@ -1,7 +1,7 @@
 # Fast Forward Composer Installers
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/php-fast-forward/composer-installers/95176c0ef8da5d2c698dd70cc9b5151a5458c951/docs/_static/mascot-banner.png" alt="Dash installing package resources into consumer directories" width="840">
+  <img src="docs/_static/mascot-banner.png" alt="Dash installing package resources into consumer directories" width="840">
 </p>
 
 Composer installer plugin for Fast Forward resource bundle packages.
