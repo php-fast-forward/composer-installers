@@ -1,5 +1,9 @@
 # Fast Forward Composer Installers
 
+<p align="center">
+  <img src="docs/_static/mascot-banner.png" alt="Dash installing package resources into consumer directories" width="840">
+</p>
+
 Composer installer plugin for Fast Forward resource bundle packages.
 
 `fast-forward/composer-installers` lets Fast Forward packages declare a payload
