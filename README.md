@@ -1,5 +1,9 @@
 # Fast Forward Composer Installers
 
+<p align="center">
+  <img src="assets/brand/dash.png" alt="Dash, the PHP Fast Forward fox, wearing a purple hoodie" width="320">
+</p>
+
 Composer installer plugin for Fast Forward resource bundle packages.
 
 `fast-forward/composer-installers` lets Fast Forward packages declare a payload
