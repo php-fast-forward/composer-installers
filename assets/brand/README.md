@@ -1,27 +1,9 @@
-# Dash artwork
+# Contextual Dash artwork
 
-`dash.png` is a byte-identical copy of the approved developer collection master.
+The repository-specific illustration is [`docs/_static/mascot-banner.png`](../../docs/_static/mascot-banner.png).
 
-- Source: [PHP Fast Forward brand kit](https://github.com/php-fast-forward/.github/tree/e1d43e2af51bcb7aa0b48613830a18d5fa5d4536).
-- Source commit: `e1d43e2af51bcb7aa0b48613830a18d5fa5d4536`.
-- Manifest ID: `dash-developer-welcome`.
-- Source path: `assets/mascot/dash-developer-welcome.png`.
-- SHA-256: `38b2c5bb87c94326bcab6463f74fc785414d8539e9175e088b5a5c797a466e09`.
-- Dimensions: 1024 × 1536 pixels; PNG, RGBA.
-- Treatment: no regeneration, crop, recoloring, or package-specific marks.
-- Usage: README illustration, displayed at 320 pixels wide with descriptive alt text.
+Dash installing package resources into consumer directories.
 
-The central kit owns character definitions and future revisions. Its
-[`dash-art` skill](https://github.com/php-fast-forward/.github/blob/e1d43e2af51bcb7aa0b48613830a18d5fa5d4536/skills/dash-art/SKILL.md)
-defines how to create consistent repository illustrations.
+The [generation receipt](../../docs/_static/mascot-banner.receipt.json) records the complete prompt, reference hashes, output hash and publication authority. It replaces the generic welcome illustration; the canonical character remains owned by the [Fast Forward brand kit](https://github.com/php-fast-forward/.github/tree/654e4a463533f1d8b8223369b3b0bbc1a4a0badf).
 
-Rights follow the central catalog: generated during authorized repository identity
-work; source artwork rights remain unrecorded and no separate asset license is
-asserted. This file does not extend the package's software license to the image.
-
-Publication authorization: on 2026-10-05, the maintainer explicitly requested
-Dash images in the READMEs of every organization repository with submitted
-implementation, and public pull requests for those changes. That request
-authorizes this unchanged copy in the repository and its public README display
-for this rollout. It does not assert a general third-party reuse license or
-resolve the historical source-art rights recorded above.
+The maintainer authorized this contextual image in public repository READMEs and documentation on 2026-10-05. Historical source-art rights remain unrecorded; this record does not grant an independent asset license or extend the software license to the image.
