@@ -18,3 +18,10 @@ defines how to create consistent repository illustrations.
 Rights follow the central catalog: generated during authorized repository identity
 work; source artwork rights remain unrecorded and no separate asset license is
 asserted. This file does not extend the package's software license to the image.
+
+Publication authorization: on 2026-10-05, the maintainer explicitly requested
+Dash images in the READMEs of every organization repository with submitted
+implementation, and public pull requests for those changes. That request
+authorizes this unchanged copy in the repository and its public README display
+for this rollout. It does not assert a general third-party reuse license or
+resolve the historical source-art rights recorded above.
