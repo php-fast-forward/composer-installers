@@ -158,3 +158,10 @@ A copy, listing and successful task are separate observations.
 Tool contracts: [llm/skills 1.15.0](https://github.com/roxblnfk/skills/tree/1.15.0),
 [Composer plugin approval](https://getcomposer.org/doc/06-config.md#allow-plugins)
 and [Skills CLI](https://github.com/vercel-labs/skills).
+
+The Skills CLI 1.7.2 removal report is not proof that the canonical project
+`.agents/skills` directory disappeared. A Codex project exercise reported one
+removal while that copied package remained. Inspect the actual target and CLI
+lockfiles afterwards. If an obsolete copy remains, verify that no other host
+uses it, then archive only that selected directory outside discovery using the
+manual recovery procedure above. Do not run a blanket clean to compensate.
