@@ -1,0 +1,21 @@
+{
+    "schema": 1,
+    "owner": "fast-forward/changelog",
+    "name": "fast-forward-changelog",
+    "scope": "project",
+    "target": ".agents/skills/fast-forward-changelog",
+    "source": {
+        "package": "fast-forward/changelog",
+        "version": "v0.3.0",
+        "reference": "85474de5a16bb08f83c9f30e0ed72f331a210f07"
+    },
+    "files": {
+        "LICENSE": "58bd7c00603e499c575d53a97b8b8c1d1398f584ea5f9f77d369780efb2066ab",
+        "SKILL.md": "a71cfdffae34b69e555955b6b82be858bf65e4406f954d566b651cda0f0cd952",
+        "examples/contribution.php": "46f2b30277b4f880a8fc4f5d503d2a4fd13c6802a929159b1895f55f9a97dd2e",
+        "references/automation.md": "0cb96ff6d62f44c19f514fcbb42b88fbe5f7382bcfed87c533c8ac6fd3bc95bb",
+        "references/cli.md": "787f33efcbc72d40ce5b55507f6f0a59b686bffe4d7edfcf4242c427d7db023e",
+        "references/php-api.md": "32b67728f3c4ba5870a40f5ad88946dd274f84619676d4783642780a172cade8"
+    },
+    "payload_sha256": "f1969293e2f761bfea32eb4d3e04980cf7a8f2a48313188a20d15390751eb681"
+}
