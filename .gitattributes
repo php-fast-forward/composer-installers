@@ -5,3 +5,7 @@
 /AGENTS.md    export-ignore
 /docs/ export-ignore
 /README*.md export-ignore
+/.agents/ export-ignore
+/skills.json export-ignore
+/.changelog/ export-ignore
+/CONTRIBUTING.md export-ignore

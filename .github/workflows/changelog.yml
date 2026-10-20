@@ -1,0 +1,43 @@
+name: Changelog
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+      - closed
+  push:
+    branches:
+      - main
+  workflow_dispatch: null
+
+permissions: {}
+
+jobs:
+  changelog:
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+      statuses: write
+    uses: php-fast-forward/changelog/.github/workflows/changelog.yml@v0
+    with:
+      source: tags
+      version-pr-title: 'chore(release): fast-forward/composer-installers v{current_version} → v{next_version}'
+      base-branch: main

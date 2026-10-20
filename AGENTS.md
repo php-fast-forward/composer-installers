@@ -26,8 +26,17 @@ Important paths:
 - `src/ResourceBundleMaterializer.php` copies payload files and maintains the installer manifest.
 - `README.md` documents the bundle metadata and consumer configuration contract.
 
-Do not add GitHub workflows in this repository yet; shared workflows are being
-externalized separately.
+The repository consumes Fast Forward Changelog's reusable workflow through
+`.github/workflows/changelog.yml` on the published `v0` channel. Add independent
+`.changelog/*.md` fragments for observable changes and follow `CONTRIBUTING.md`.
+Run `composer install` to fetch the Changelog skill declared in `skills.json`,
+then read `.agents/skills/fast-forward-changelog/SKILL.md` for its lifecycle.
+The skill is managed by `llm/skills` from GitHub; do not commit generated
+`.agents` files or add a native Changelog installation receipt.
+
+Review the managed version PR before merging. Its approved merge into `main`
+publishes the version tag and GitHub Release automatically. Adoption work must
+not merge a version PR or publish a release without separate authorization.
 
 ## Testing Instructions
 

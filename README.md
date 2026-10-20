@@ -84,3 +84,7 @@ are not removed automatically; they are skipped with a warning.
 The materialized payload is copied as literal files and directories. Composer
 `path` repositories may still symlink the package root in `vendor/`, but the
 consumer-facing payload remains copied.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for changelog fragments, local checks and the release-review flow.
