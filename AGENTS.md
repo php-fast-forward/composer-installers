@@ -29,8 +29,10 @@ Important paths:
 The repository consumes Fast Forward Changelog's reusable workflow through
 `.github/workflows/changelog.yml` on the published `v0` channel. Add independent
 `.changelog/*.md` fragments for observable changes and follow `CONTRIBUTING.md`.
-Use the installed `.agents/skills/fast-forward-changelog/SKILL.md` for the
-changelog lifecycle; preserve its installer receipt and payload integrity.
+Run `composer install` to fetch the Changelog skill declared in `skills.json`,
+then read `.agents/skills/fast-forward-changelog/SKILL.md` for its lifecycle.
+The skill is managed by `llm/skills` from GitHub; do not commit generated
+`.agents` files or add a native Changelog installation receipt.
 
 Review the managed version PR before merging. Its approved merge into `main`
 publishes the version tag and GitHub Release automatically. Adoption work must

@@ -13,10 +13,15 @@ cpx --skip-local fast-forward/changelog check --since=origin/main --no-interacti
 
 Select the category and semantic impact that describe the change. Keep published
 history intact; pending notes belong in fragments rather than an `Unreleased`
-section. The project skill is installed at
-[`.agents/skills/fast-forward-changelog/SKILL.md`](.agents/skills/fast-forward-changelog/SKILL.md).
-Check its local integrity with
-`cpx --skip-local fast-forward/changelog skill:install --check --json`.
+section.
+
+Run `composer install` to install the development tools and fetch the project
+skill into `.agents/skills/fast-forward-changelog`. The committed `skills.json`
+selects its GitHub source; the generated `.agents` directory stays out of Git.
+This installs `llm/skills`, without adding Changelog's runtime dependencies.
+Inspect the copy with `composer skills:show` and refresh compatible versions with
+`composer skills:update --from=github`. Do not use the legacy Changelog skill
+installer on this manager-owned copy.
 
 The [workflow](.github/workflows/changelog.yml) follows the published `v0` channel.
 It validates PR notes, maintains PR feedback and prepares one version PR on
