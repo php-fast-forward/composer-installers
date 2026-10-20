@@ -55,3 +55,11 @@ repository and a local `fast-forward-resource-bundle` package through Composer
 Keep PHP code strict, focused, and side-effect conscious. Do not silently
 overwrite consumer-owned files; only refresh files tracked by the installer
 manifest.
+
+## Bundled consumer skill
+
+Read [the consumer skill](resources/skills/fast-forward-composer-installers/SKILL.md) when changing application integration
+examples, consumer guides or the skill. Keep its version contract, references
+and executable examples aligned with the supported public API. The canonical
+distributable source is `resources/skills`; it needs no installed copy or host
+alias. Repository maintenance continues to follow this AGENTS.md.

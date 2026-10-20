@@ -32,6 +32,9 @@
         "composer/composer": "^2.8",
         "llm/skills": "^1.15"
     },
+    "suggest": {
+        "llm/skills": "Optionally synchronize the bundled consumer skill in your project."
+    },
     "minimum-stability": "stable",
     "autoload": {
         "psr-4": {
@@ -52,6 +55,9 @@
         "branch-alias": {
             "dev-main": "1.x-dev"
         },
-        "class": "FastForward\\ComposerInstallers\\Plugin"
+        "class": "FastForward\\ComposerInstallers\\Plugin",
+        "skills": {
+            "source": "resources/skills"
+        }
     }
 }

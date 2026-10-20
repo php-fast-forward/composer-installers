@@ -88,3 +88,12 @@ consumer-facing payload remains copied.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for changelog fragments, local checks and the release-review flow.
+
+## Consumer agent skill
+
+The package includes [fast-forward-composer-installers](resources/skills/fast-forward-composer-installers/SKILL.md) for application integration.
+It supports `fast-forward/composer-installers:^0.4`; inspect the installed version.
+See [skill installation and lifecycle](resources/skills/fast-forward-composer-installers/references/installation.md) for
+optional project synchronization with `llm/skills ^1.15`, guarded manual
+project/global copies and a pinned Skills CLI alternative. Shipping files does
+not install tooling or activate the skill in an agent session.

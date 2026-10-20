@@ -1,0 +1,29 @@
+{
+    "name": "example/consumer",
+    "license": "MIT",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../bundle",
+            "options": {
+                "symlink": false
+            }
+        }
+    ],
+    "require": {
+        "fast-forward/composer-installers": "^0.4",
+        "example/assets": "^1.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "fast-forward/composer-installers": true
+        }
+    },
+    "extra": {
+        "installer-paths": {
+            "generated/fast-forward-assets/": [
+                "example/assets"
+            ]
+        }
+    }
+}
