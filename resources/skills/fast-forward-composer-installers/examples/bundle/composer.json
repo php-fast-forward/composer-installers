@@ -1,0 +1,12 @@
+{
+    "name": "example/assets",
+    "version": "1.0.0",
+    "type": "fast-forward-resource-bundle",
+    "license": "MIT",
+    "extra": {
+        "fast-forward-bundle": {
+            "payload-path": "payload",
+            "install-policy": "mutable"
+        }
+    }
+}
