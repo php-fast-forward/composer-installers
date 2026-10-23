@@ -100,6 +100,24 @@ manifest-owned files. Unmanaged files remain; nonempty directories are retained.
 Back up local changes before update/removal and review the exact owned paths.
 Do not present the manifest as a backup or promise that edits survive updates.
 
+Manifests written by the target-identity fix record `target-path-format` as
+`project-relative` or `absolute`. Outside-project absolute targets retain their
+root separator. Changing the normalized target stops before any materialized
+file or manifest mutation, even with authoritative policy. Restore the old
+mapping, back up managed edits and remove the bundle through Composer to clean
+its recorded destination; then select the new mapping and require it again.
+Do not discard the old manifest to bypass the check. Composer may already have
+updated its lockfile and package in vendor before reporting the plugin error.
+
+Older ^0.4 installations may have manifests without `target-path-format`.
+Updates/removal of those records stop because a relative-looking path could
+also be an absolute external path whose leading slash was lost. Preserve the
+manifest and files; verify the original destination from installation records,
+then explicitly repair `target-path` and add the corresponding format before
+retrying. A project-relative record must stay under the project. Do not guess
+from file existence or the current mapping; unresolved identity stays blocked.
+See the package README's target-identity recovery procedure for the full scope.
+
 Authoritative bundles can overwrite divergent existing files even without an
 old manifest; choose that only for intentionally donor-owned targets. Do not
 use an entire application source/config/discovery root as a blanket target.

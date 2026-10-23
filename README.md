@@ -85,6 +85,65 @@ The materialized payload is copied as literal files and directories. Composer
 `path` repositories may still symlink the package root in `vendor/`, but the
 consumer-facing payload remains copied.
 
+## Target identity and deliberate target changes
+
+Relative mappings resolve under the Composer project; absolute mappings may be
+inside or outside it. Manifests preserve that identity with `target-path` and
+`target-path-format` (`project-relative` or `absolute`). Equivalent normalized
+paths share ownership. The format describes the recorded path: an absolute
+mapping inside the project can be recorded as project-relative, while an
+outside-project destination keeps its absolute root separator.
+
+Updating a bundle with a different target stops before any materialized file or
+manifest is changed, under either install policy. Entries from the old target
+never authorize overwrites or stale-file deletion in the new one. Composer may
+already have updated its lockfile and the package in `vendor/` when the plugin
+reports the error; the diagnostic concerns the materialized payload and manifest,
+not a rollback of the entire Composer transaction.
+
+To change a target deliberately, restore the old mapping, back up any edits to
+managed files, and remove the resource bundle through Composer. Removal cleans
+only the old manifest's managed entries and retains unrelated files and nonempty
+directories. Then change the mapping and require the bundle again. Inspect
+mutable conflict warnings at the new target. Do not delete the manifest as a
+shortcut: that would lose the evidence needed to clean the old target.
+
+### Existing manifests without a target format
+
+Earlier manifests could lose an external absolute path's leading slash. A stored
+path such as `tmp/example/assets` could mean either a project-relative directory
+or the damaged absolute `/tmp/example/assets`. Both might exist, so checking for
+files or consulting the current mapping does not establish which was originally
+owned. Updates and removals stop on **all** manifests lacking an explicit format,
+including ordinary relative records, without guessing or modifying payloads.
+
+For a legacy consumer, preserve a backup of its manifest and affected files.
+Verify the original destination from the installation's configuration and records;
+if it cannot be established, leave the operation blocked. After that verification,
+repair `target-path` to the verified path and add `target-path-format` explicitly:
+use `project-relative` for a path under the project, or `absolute` with the full
+rooted path for an external destination. Preserve the manifest's entries. Retry
+the unchanged-target update, or deliberately remove the bundle to clean that
+verified destination before retargeting. The plugin does not migrate real consumer
+manifests automatically.
+
+## Focused regression checks
+
+After `composer install`, run:
+
+```sh
+composer validate --strict
+php tests/materialization-regressions.php
+php tests/composer-path-lifecycle.php
+```
+
+The first runner uses real Composer API objects and synthetic files. The second
+executes the installed Composer CLI against disposable local `path` repositories,
+with Packagist disabled, scripts disabled and an isolated Composer home/cache.
+It exercises install, update, rejected retargeting and deliberate removal for
+relative and absolute destinations. Both retain their synthetic fixtures under
+the ignored `tmp/` directory for inspection; they never operate on real consumers.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for changelog fragments, local checks and the release-review flow.

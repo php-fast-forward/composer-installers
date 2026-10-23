@@ -74,6 +74,9 @@ final class ResourceBundleMaterializer
      */
     private readonly string $rootDir;
 
+    /** Resolves and verifies the destination to which manifest ownership belongs. */
+    private readonly TargetPathIdentity $targetIdentity;
+
     /**
      * Creates a materializer bound to the active Composer root package.
      */
@@ -87,6 +90,7 @@ final class ResourceBundleMaterializer
         $rootDir = \is_string($configSource) && is_file($configSource)
             ? \dirname($configSource)
             : (getcwd() ?: '.');
+        $this->targetIdentity = new TargetPathIdentity($rootDir, $this->filesystem);
 
         if (str_starts_with($vendorDir, '/')) {
             $this->vendorDir = $vendorDir;
@@ -125,6 +129,7 @@ final class ResourceBundleMaterializer
         }
 
         $previousManifest = $this->readManifest($package);
+        $this->targetIdentity->requireSameTarget($previousManifest, $target);
         $nextEntries = $this->scanPayload($source);
 
         $this->removeStaleEntries($previousManifest['entries'] ?? [], $nextEntries, $target);
@@ -139,7 +144,7 @@ final class ResourceBundleMaterializer
             'package' => $package->getPrettyName(),
             'payload-path' => $payloadPath,
             'install-policy' => $installPolicy->value,
-            'target-path' => $this->relativePath($target),
+            ...$this->targetIdentity->record($target),
             'entries' => $managedEntries,
         ]);
 
@@ -160,14 +165,17 @@ final class ResourceBundleMaterializer
     public function remove(PackageInterface $package): void
     {
         $manifest = $this->readManifest($package);
-        $targetPath = $manifest['target-path'] ?? null;
-        $entries = $manifest['entries'] ?? [];
-
-        if (! \is_string($targetPath) || ! \is_array($entries)) {
+        if ($manifest === []) {
             return;
         }
 
-        $target = $this->absolutePath($targetPath);
+        $target = $this->targetIdentity->fromManifest($manifest);
+        $entries = $manifest['entries'] ?? [];
+
+        if (! \is_array($entries)) {
+            return;
+        }
+
         $this->removeEntries($entries, $target);
 
         $manifestPath = $this->manifestPath($package);
@@ -462,7 +470,7 @@ final class ResourceBundleMaterializer
      *
      * @throws JsonException
      *
-     * @return array{entries?: array<string, array{type: string, hash?: string}>, target-path?: string}
+     * @return array{entries?: array<string, array{type: string, hash?: string}>, target-path?: string, target-path-format?: string}
      */
     private function readManifest(PackageInterface $package): array
     {
@@ -535,11 +543,7 @@ final class ResourceBundleMaterializer
      */
     private function absolutePath(string $path): string
     {
-        if (str_starts_with($path, '/')) {
-            return rtrim($path, '/');
-        }
-
-        return rtrim($this->rootDir . '/' . $path, '/');
+        return $this->targetIdentity->resolve($path);
     }
 
     /**
@@ -547,14 +551,7 @@ final class ResourceBundleMaterializer
      */
     private function relativePath(string $path): string
     {
-        $path = $this->normalizePath($path);
-        $root = $this->normalizePath($this->rootDir) . '/';
-
-        if (str_starts_with($path, $root)) {
-            return substr($path, \strlen($root));
-        }
-
-        return $path;
+        return $this->targetIdentity->display($path);
     }
 
     /**
