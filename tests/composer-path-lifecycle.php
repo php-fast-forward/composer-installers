@@ -55,11 +55,18 @@ function runComposer(string $consumer, string $runtime, array $arguments, bool $
 $repository = dirname(__DIR__);
 $run = $repository . '/tmp/composer-lifecycle-' . bin2hex(random_bytes(6));
 
-foreach (['relative', 'absolute-inside', 'absolute-outside'] as $kind) {
+foreach (['relative', 'absolute-inside', 'absolute-outside', 'posix-colon'] as $kind) {
+    if ($kind === 'posix-colon' && DIRECTORY_SEPARATOR !== '/') {
+        continue;
+    }
     $directory = $run . '/' . $kind;
     $consumer = $directory . '/consumer';
     $target = $kind === 'absolute-outside' ? $directory . '/external' : $consumer . '/generated';
     $mapping = $kind === 'relative' ? 'generated/' : $target . '/';
+    if ($kind === 'posix-colon') {
+        $target = $consumer . '/a:generated';
+        $mapping = 'a:generated';
+    }
     $bundle = [
         'name' => 'example/assets', 'version' => '1.0.0', 'type' => 'fast-forward-resource-bundle', 'license' => 'MIT',
         'extra' => ['fast-forward-bundle' => ['payload-path' => 'payload']],

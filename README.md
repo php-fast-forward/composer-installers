@@ -94,6 +94,14 @@ paths share ownership. The format describes the recorded path: an absolute
 mapping inside the project can be recorded as project-relative, while an
 outside-project destination keeps its absolute root separator.
 
+On POSIX, a colon in a name such as `a:generated` does not make the target
+absolute; it still resolves under the project. Parent segments are supported
+for ordinary paths such as `../external`. A parent segment that cancels a
+symlink component, such as `link/../assets`, is rejected before materialization
+or manifest-driven removal: lexical cancellation can select a different physical
+directory. Use the verified physical destination without that traversal. This
+also applies to dot/separator aliases and paths read back from a manifest.
+
 Updating a bundle with a different target stops before any materialized file or
 manifest is changed, under either install policy. Entries from the old target
 never authorize overwrites or stale-file deletion in the new one. Composer may

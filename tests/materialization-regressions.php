@@ -159,10 +159,96 @@ $cases['equivalent normalized target reuses ownership'] = static function () use
     expect(file_get_contents($root . '/generated/a.txt') === 'updated', 'Equivalent target lost ownership.');
 };
 
+foreach (['a:generated', './a:generated'] as $mapping) {
+    $cases['POSIX colon target lifecycle: ' . $mapping] = static function () use ($run, $mapping): void {
+        if (DIRECTORY_SEPARATOR !== '/') {
+            return;
+        }
+        $directory = $run . '/colon-' . ($mapping[0] === '.' ? 'dot' : 'bare');
+        $working = $directory . '/process-working';
+        put($working . '/a:generated/a.txt', 'process-relative decoy');
+        $originalWorkingDirectory = getcwd();
+        chdir($working);
+        try {
+            [$materializer, , $bundle, $root] = fixture($directory, $mapping);
+            $source = $directory . '/bundle';
+            put($source . '/payload/a.txt', 'first');
+            put($root . '/a:generated/consumer.txt', 'preserve');
+            $materializer->materialize($bundle, $source);
+            expect(is_file($root . '/a:generated/a.txt'), 'Colon target was not resolved under the project.');
+            $manifest = json_decode(file_get_contents($root . '/vendor/fast-forward/.composer-installers/example_assets.json'), true, flags: JSON_THROW_ON_ERROR);
+            expect($manifest['target-path-format'] === 'project-relative', 'Colon target was recorded as absolute.');
+            put($source . '/payload/a.txt', 'updated');
+            $materializer->materialize($bundle, $source);
+            expect(file_get_contents($root . '/a:generated/a.txt') === 'updated', 'Colon target update missed its managed file.');
+            $materializer->remove($bundle);
+            expect(!file_exists($root . '/a:generated/a.txt'), 'Colon target removal missed its managed file.');
+            expect(file_get_contents($root . '/a:generated/consumer.txt') === 'preserve', 'Colon target removed consumer file.');
+            expect(file_get_contents($working . '/a:generated/a.txt') === 'process-relative decoy', 'Colon target touched process-relative decoy.');
+        } finally {
+            chdir($originalWorkingDirectory);
+        }
+    };
+}
+
+foreach (['link/../assets/', 'link/./..//assets/', 'link/nested/../../assets/'] as $index => $mapping) {
+    $cases['symlink parent traversal rejects initial materialization: ' . $mapping] = static function () use ($run, $index, $mapping): void {
+        $directory = $run . '/symlink-initial-' . $index;
+        [$materializer, , $bundle, $root] = fixture($directory, $mapping);
+        mkdir($directory . '/external/child/nested', 0777, true);
+        expect(symlink($directory . '/external/child', $root . '/link'), 'Could not create synthetic symlink.');
+        $source = $directory . '/bundle';
+        put($source . '/payload/a.txt', 'payload');
+        put($root . '/assets/a.txt', 'lexical consumer');
+        put($directory . '/external/assets/a.txt', 'physical consumer');
+        rejectsWithoutWrites(static fn() => $materializer->materialize($bundle, $source), $directory, 'symlink/parent traversal');
+    };
+}
+
+$cases['relative outside target under symlinked project root remains supported'] = static function () use ($run): void {
+    $directory = $run . '/symlink-root';
+    mkdir($directory . '/physical', 0777, true);
+    expect(symlink($directory . '/physical', $directory . '/alias'), 'Could not create synthetic project-root alias.');
+    [$materializer, , $bundle] = fixture($directory . '/alias', '../external/');
+    $source = $directory . '/bundle';
+    put($source . '/payload/a.txt', 'payload');
+    put($directory . '/physical/external/consumer.txt', 'preserve');
+    $materializer->materialize($bundle, $source);
+    expect(file_get_contents($directory . '/physical/external/a.txt') === 'payload', 'Relative outside mapping changed physical target.');
+    $materializer->remove($bundle);
+    expect(!file_exists($directory . '/physical/external/a.txt'), 'Relative outside removal missed physical target.');
+    expect(file_get_contents($directory . '/physical/external/consumer.txt') === 'preserve', 'Relative outside removal touched consumer file.');
+};
+
+$cases['symlink parent traversal cannot reuse ownership'] = static function () use ($run): void {
+    $directory = $run . '/symlink-ownership';
+    [$materializer, $consumer, $bundle, $root] = fixture($directory, 'assets/');
+    mkdir($directory . '/external/child', 0777, true);
+    expect(symlink($directory . '/external/child', $root . '/link'), 'Could not create synthetic symlink.');
+    $source = $directory . '/bundle';
+    put($source . '/payload/a.txt', 'first');
+    put($source . '/payload/stale.txt', 'old');
+    $materializer->materialize($bundle, $source);
+    put($directory . '/external/assets/a.txt', 'physical consumer');
+    put($directory . '/external/assets/stale.txt', 'physical stale consumer');
+    put($source . '/payload/a.txt', 'updated');
+    unlink($source . '/payload/stale.txt');
+    $consumer->setExtra(['installer-paths' => ['link/../assets/' => ['example/assets']]]);
+    rejectsWithoutWrites(static fn() => $materializer->materialize($bundle, $source), $directory, 'symlink/parent traversal');
+
+    // The same rule must apply when a stored path is read before deletion.
+    $path = $root . '/vendor/fast-forward/.composer-installers/example_assets.json';
+    $manifest = json_decode(file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+    $manifest['target-path'] = 'link/../assets/';
+    put($path, json_encode($manifest, JSON_THROW_ON_ERROR));
+    rejectsWithoutWrites(static fn() => $materializer->remove($bundle), $directory, 'symlink/parent traversal');
+};
+
 foreach (['relative', 'stripped-absolute'] as $kind) {
     $cases['legacy ' . $kind . ' manifest fails closed'] = static function () use ($run, $kind): void {
         $directory = $run . '/legacy-' . $kind;
-        [$materializer, , $bundle, $root] = fixture($directory, 'generated/');
+        $target = $kind === 'stripped-absolute' ? $directory . '/external' : 'generated/';
+        [$materializer, , $bundle, $root] = fixture($directory, $target);
         $source = $directory . '/bundle';
         put($source . '/payload/a.txt', 'first');
         $materializer->materialize($bundle, $source);
@@ -171,7 +257,7 @@ foreach (['relative', 'stripped-absolute'] as $kind) {
         unset($manifest['target-path-format']);
         if ($kind === 'stripped-absolute') {
             $manifest['target-path'] = ltrim($directory . '/external', '/');
-            put($directory . '/external/a.txt', 'external');
+            expect(file_get_contents($directory . '/external/a.txt') === 'first', 'Legacy fixture did not install at the original external target.');
             put($root . '/' . $manifest['target-path'] . '/a.txt', 'decoy');
         }
         put($path, json_encode($manifest, JSON_THROW_ON_ERROR));

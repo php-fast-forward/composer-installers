@@ -109,6 +109,13 @@ its recorded destination; then select the new mapping and require it again.
 Do not discard the old manifest to bypass the check. Composer may already have
 updated its lockfile and package in vendor before reporting the plugin error.
 
+On POSIX, `a:generated` remains a project-relative target. Ordinary parent paths
+such as `../external` are supported. A parent segment that cancels a symlink
+component (`link/../assets`) is rejected before copying or removing files, also
+when read from a manifest. Lexical normalization could otherwise select a
+different physical directory. Choose the verified physical destination without
+that traversal; do not reinterpret existing ownership to bypass the rejection.
+
 Historical 0.4 and earlier installations wrote manifests without
 `target-path-format`. They are outside this skill's current API baseline.
 After an explicitly approved upgrade to ^0.5, updates/removal of those records

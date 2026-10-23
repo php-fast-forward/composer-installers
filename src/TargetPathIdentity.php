@@ -26,17 +26,17 @@ final class TargetPathIdentity
     /** Bind target identities to the absolute Composer project root. */
     public function __construct(string $root, private readonly Filesystem $filesystem)
     {
-        if (! $filesystem->isAbsolutePath($root)) {
+        if (! $this->isAbsolutePath($root)) {
             $root = (getcwd() ?: '.') . '/' . $root;
         }
-        $this->root = $filesystem->normalizePath($root);
+        $this->root = $this->normalize($root);
     }
 
     /** Resolve a mapping to the normalized absolute path used for all file operations. */
     public function resolve(string $path): string
     {
-        return $this->filesystem->normalizePath(
-            $this->filesystem->isAbsolutePath($path) ? $path : $this->root . '/' . $path,
+        return $this->normalize(
+            $this->isAbsolutePath($path) ? $path : $this->root . '/' . $path,
         );
     }
 
@@ -66,7 +66,7 @@ final class TargetPathIdentity
 
         return [
             'target-path' => $path,
-            'target-path-format' => $this->filesystem->isAbsolutePath($path) ? 'absolute' : 'project-relative',
+            'target-path-format' => $this->isAbsolutePath($path) ? 'absolute' : 'project-relative',
         ];
     }
 
@@ -92,7 +92,7 @@ final class TargetPathIdentity
             );
         }
 
-        $isAbsolute = $this->filesystem->isAbsolutePath($path);
+        $isAbsolute = $this->isAbsolutePath($path);
         if (($format === 'absolute') !== $isAbsolute) {
             throw new RuntimeException('Stored bundle target-path disagrees with target-path-format; verify the original destination before retrying.');
         }
@@ -103,6 +103,51 @@ final class TargetPathIdentity
         }
 
         return $target;
+    }
+
+    /** Classify paths according to the host, where a colon does not root POSIX paths. */
+    private function isAbsolutePath(string $path): bool
+    {
+        return DIRECTORY_SEPARATOR === '/'
+            ? str_starts_with($path, '/')
+            : $this->filesystem->isAbsolutePath($path);
+    }
+
+    /**
+     * Normalize spelling only when removing parent segments preserves the destination.
+     *
+     * Cancelling a symlink with ".." changes physical traversal. Check each
+     * cancelled component before lexical normalization, including earlier parent
+     * cancellations and dot/separator aliases. Plain ../external remains valid.
+     *
+     * @throws RuntimeException When a parent traversal would cancel a symlink.
+     */
+    private function normalize(string $path): string
+    {
+        $prefix = '';
+        foreach (explode('/', str_replace('\\', '/', $path)) as $component) {
+            if ($component === '.') {
+                continue;
+            }
+            if ($component === '..') {
+                if (is_link($prefix)) {
+                    throw new RuntimeException(
+                        'Bundle target contains ambiguous symlink/parent traversal. No materialized files or manifest were changed. '
+                        . 'Use the verified physical destination without traversing a symlink followed by ".."; '
+                        . 'preserve existing ownership records before retrying.',
+                    );
+                }
+                $prefix = $this->filesystem->normalizePath($prefix . '/..');
+            } elseif ($component === '') {
+                if ($prefix === '' || $prefix === '/') {
+                    $prefix .= '/';
+                }
+            } else {
+                $prefix .= ($prefix !== '' && ! str_ends_with($prefix, '/') ? '/' : '') . $component;
+            }
+        }
+
+        return $this->filesystem->normalizePath($path);
     }
 
     /**
