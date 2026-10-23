@@ -2,17 +2,17 @@
 name: fast-forward-composer-installers
 description: Configure Fast Forward Composer resource-bundle payloads, root target mappings and mutable ownership; verify copied files, manifests and update/removal boundaries.
 license: MIT; see LICENSE
-compatibility: Supports fast-forward/composer-installers ^0.4, PHP ^8.3 and composer-plugin-api ^2.6. Requires Composer 2 with explicit root plugin approval. Earlier releases are outside this contract.
+compatibility: Supports fast-forward/composer-installers ^0.5, PHP ^8.3 and composer-plugin-api ^2.6. Requires Composer 2 with explicit root plugin approval. Earlier releases are outside this contract.
 metadata:
   author: Fast Forward
-  api-baseline: fast-forward/composer-installers ^0.4
+  api-baseline: fast-forward/composer-installers ^0.5
 ---
 
 # Materialize an application's resource bundle
 
 Inspect the application's instructions, Composer manifest/lockfile and installed
 plugin version before editing. Run `composer show fast-forward/composer-installers`.
-Use this skill for ^0.4; for an older version inspect its own contract rather
+Use this skill for ^0.5; for an older version inspect its own contract rather
 than silently upgrading the application. This is a Composer plugin, not a
 container service and not the optional llm/skills installer.
 
@@ -48,7 +48,7 @@ requirements and target map with existing application settings:
     {"type": "path", "url": "../bundle", "options": {"symlink": false}}
   ],
   "require": {
-    "fast-forward/composer-installers": "^0.4",
+    "fast-forward/composer-installers": "^0.5",
     "example/assets": "^1.0"
   },
   "config": {
@@ -109,8 +109,10 @@ its recorded destination; then select the new mapping and require it again.
 Do not discard the old manifest to bypass the check. Composer may already have
 updated its lockfile and package in vendor before reporting the plugin error.
 
-Older ^0.4 installations may have manifests without `target-path-format`.
-Updates/removal of those records stop because a relative-looking path could
+Historical 0.4 and earlier installations wrote manifests without
+`target-path-format`. They are outside this skill's current API baseline.
+After an explicitly approved upgrade to ^0.5, updates/removal of those records
+stop because a relative-looking path could
 also be an absolute external path whose leading slash was lost. Preserve the
 manifest and files; verify the original destination from installation records,
 then explicitly repair `target-path` and add the corresponding format before

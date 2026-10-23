@@ -67,11 +67,11 @@ foreach (['relative', 'absolute-inside', 'absolute-outside'] as $kind) {
     $configuration = [
         'name' => 'example/consumer', 'type' => 'project', 'license' => 'MIT',
         'repositories' => [
-            ['type' => 'path', 'url' => $repository, 'options' => ['symlink' => true, 'versions' => ['fast-forward/composer-installers' => '0.4.99']]],
+            ['type' => 'path', 'url' => $repository, 'options' => ['symlink' => true, 'versions' => ['fast-forward/composer-installers' => '0.5.0']]],
             ['type' => 'path', 'url' => $directory . '/bundle', 'options' => ['symlink' => false]],
             ['packagist.org' => false],
         ],
-        'require' => ['fast-forward/composer-installers' => '0.4.99', 'example/assets' => '^1.0'],
+        'require' => ['fast-forward/composer-installers' => '^0.5', 'example/assets' => '^1.0'],
         'config' => ['allow-plugins' => ['fast-forward/composer-installers' => true]],
         'extra' => ['installer-paths' => [$mapping => ['example/assets']]],
     ];
