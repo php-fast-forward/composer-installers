@@ -24,6 +24,7 @@ Important paths:
 - `src/Plugin.php` registers the Composer installer.
 - `src/ResourceBundleInstaller.php` hooks Composer package install, update, and uninstall operations.
 - `src/ResourceBundleMaterializer.php` copies payload files and maintains the installer manifest.
+- `src/TargetPathIdentity.php` resolves target identities and rejects ambiguous manifests or target changes before materialized-file mutation.
 - `README.md` documents the bundle metadata and consumer configuration contract.
 
 The repository consumes Fast Forward Changelog's reusable workflow through
@@ -49,6 +50,12 @@ composer validate --strict
 For installer behavior, create a throwaway consumer project that requires this
 repository and a local `fast-forward-resource-bundle` package through Composer
 `path` repositories.
+
+Run `php tests/materialization-regressions.php` for focused ownership/path
+regressions and `php tests/composer-path-lifecycle.php` for actual Composer
+install/update/remove hooks in synthetic local path consumers. Fixtures remain
+under ignored `tmp/`; preserve real consumer data. Legacy manifests without
+`target-path-format` require explicit owner verification, never guessed repair.
 
 ## Code Style
 
