@@ -2,17 +2,17 @@
 name: fast-forward-composer-installers
 description: Configure Fast Forward Composer resource-bundle payloads, root target mappings and mutable ownership; verify copied files, manifests and update/removal boundaries.
 license: MIT; see LICENSE
-compatibility: Supports fast-forward/composer-installers ^0.4, PHP ^8.3 and composer-plugin-api ^2.6. Requires Composer 2 with explicit root plugin approval. Earlier releases are outside this contract.
+compatibility: Supports fast-forward/composer-installers ^0.5, PHP ^8.3 and composer-plugin-api ^2.6. Requires Composer 2 with explicit root plugin approval. Earlier releases are outside this contract.
 metadata:
   author: Fast Forward
-  api-baseline: fast-forward/composer-installers ^0.4
+  api-baseline: fast-forward/composer-installers ^0.5
 ---
 
 # Materialize an application's resource bundle
 
 Inspect the application's instructions, Composer manifest/lockfile and installed
 plugin version before editing. Run `composer show fast-forward/composer-installers`.
-Use this skill for ^0.4; for an older version inspect its own contract rather
+Use this skill for ^0.5; for an older version inspect its own contract rather
 than silently upgrading the application. This is a Composer plugin, not a
 container service and not the optional llm/skills installer.
 
@@ -48,7 +48,7 @@ requirements and target map with existing application settings:
     {"type": "path", "url": "../bundle", "options": {"symlink": false}}
   ],
   "require": {
-    "fast-forward/composer-installers": "^0.4",
+    "fast-forward/composer-installers": "^0.5",
     "example/assets": "^1.0"
   },
   "config": {
@@ -99,6 +99,33 @@ are removed, including local edits to those managed files. Uninstall removes
 manifest-owned files. Unmanaged files remain; nonempty directories are retained.
 Back up local changes before update/removal and review the exact owned paths.
 Do not present the manifest as a backup or promise that edits survive updates.
+
+Manifests written by the target-identity fix record `target-path-format` as
+`project-relative` or `absolute`. Outside-project absolute targets retain their
+root separator. Changing the normalized target stops before any materialized
+file or manifest mutation, even with authoritative policy. Restore the old
+mapping, back up managed edits and remove the bundle through Composer to clean
+its recorded destination; then select the new mapping and require it again.
+Do not discard the old manifest to bypass the check. Composer may already have
+updated its lockfile and package in vendor before reporting the plugin error.
+
+On POSIX, `a:generated` remains a project-relative target. Ordinary parent paths
+such as `../external` are supported. A parent segment that cancels a symlink
+component (`link/../assets`) is rejected before copying or removing files, also
+when read from a manifest. Lexical normalization could otherwise select a
+different physical directory. Choose the verified physical destination without
+that traversal; do not reinterpret existing ownership to bypass the rejection.
+
+Historical 0.4 and earlier installations wrote manifests without
+`target-path-format`. They are outside this skill's current API baseline.
+After an explicitly approved upgrade to ^0.5, updates/removal of those records
+stop because a relative-looking path could
+also be an absolute external path whose leading slash was lost. Preserve the
+manifest and files; verify the original destination from installation records,
+then explicitly repair `target-path` and add the corresponding format before
+retrying. A project-relative record must stay under the project. Do not guess
+from file existence or the current mapping; unresolved identity stays blocked.
+See the package README's target-identity recovery procedure for the full scope.
 
 Authoritative bundles can overwrite divergent existing files even without an
 old manifest; choose that only for intentionally donor-owned targets. Do not

@@ -1,6 +1,6 @@
 # Optional installation of fast-forward-composer-installers
 
-`fast-forward/composer-installers:^0.4` includes this complete package under
+`fast-forward/composer-installers:^0.5` includes this complete package under
 `resources/skills/fast-forward-composer-installers`. Run `composer show fast-forward/composer-installers`
 and inspect that path before copying. Earlier releases are outside this skill
 contract. Composer suggestions do not install anything automatically. Library

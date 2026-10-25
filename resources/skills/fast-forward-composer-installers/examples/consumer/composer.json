@@ -11,7 +11,7 @@
         }
     ],
     "require": {
-        "fast-forward/composer-installers": "^0.4",
+        "fast-forward/composer-installers": "^0.5",
         "example/assets": "^1.0"
     },
     "config": {
