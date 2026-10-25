@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.1] - 2026-10-25
+## [0.5.0] - 2026-10-25
 
 ### Changed
 
@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   redundant skill allowlist.
 
   ([#18](https://github.com/php-fast-forward/composer-installers/pull/18))
+
+### Fixed
+
+- Preserve absolute resource-bundle target identity across install, update and removal,
+  and reject target changes before old ownership can overwrite or delete new-target
+  consumer files. Existing manifests without an explicit target format now stop for
+  deliberate destination verification instead of guessing a destructive path.
+  Preserve POSIX colon-containing relative names and reject parent traversal that
+  cancels a symlink before lexical normalization can change the physical target.
+
+  ([#17](https://github.com/php-fast-forward/composer-installers/pull/17))
 
 ## [0.4.0] - 2026-10-21
 
@@ -47,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 [unreleased]: https://github.com/php-fast-forward/composer-installers/compare/v0.3.0...HEAD
-[0.4.1]: https://github.com/php-fast-forward/composer-installers/compare/v0.4.0...v0.4.1
+[0.5.0]: https://github.com/php-fast-forward/composer-installers/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/php-fast-forward/composer-installers/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/php-fast-forward/composer-installers/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/php-fast-forward/composer-installers/compare/v0.1.0...v0.2.0
