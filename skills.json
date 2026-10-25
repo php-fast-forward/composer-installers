@@ -1,21 +1,27 @@
 {
-    "$schema": "https://raw.githubusercontent.com/roxblnfk/skills/master/resources/skills.schema.json",
+    "$schema": "https://raw.githubusercontent.com/roxblnfk/skills/1.15.0/resources/skills.schema.json",
     "target": ".agents/skills",
     "aliases": [],
     "discovery": false,
     "auto-sync": true,
     "vendor-sources": false,
     "dependencies": {
-        "composer": false
+        "composer": {
+            "trusted": [
+                "fast-forward/*"
+            ],
+            "trusted-replace": true
+        }
     },
     "sources": [
         {
+            "from": "dir",
+            "path": "resources/skills"
+        },
+        {
             "from": "github",
             "package": "php-fast-forward/changelog",
-            "ref": "^0.3.0",
-            "skills": [
-                "fast-forward-changelog"
-            ]
+            "ref": "^0.4.0"
         }
     ]
 }
